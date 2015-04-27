@@ -14,10 +14,59 @@
 
 @implementation AppDelegate
 
-
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
+    
+    if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0) {
+        
+        UIUserNotificationType notificationType = UIUserNotificationTypeBadge | UIUserNotificationTypeSound | UIUserNotificationTypeAlert;
+        UIUserNotificationSettings *notificationSettings = [UIUserNotificationSettings settingsForTypes:notificationType categories:nil];
+        [[UIApplication sharedApplication] registerUserNotificationSettings:notificationSettings];
+    } else {
+        
+        [[UIApplication sharedApplication] registerForRemoteNotificationTypes:(UIRemoteNotificationTypeSound | UIRemoteNotificationTypeAlert)];
+    }
+    
     return YES;
+}
+
+- (void)application:(UIApplication *)application didRegisterUserNotificationSettings:(UIUserNotificationSettings *)notificationSettings{
+    
+    //register to receive notifications
+    [application registerForRemoteNotifications];
+}
+
+// 注册推送成功后调用该方法
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    
+    // 将token转换成string，一般会将token中的<>与空格去掉后传给后台
+    NSString *dvsToken = [[deviceToken description] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"<>"]];
+    
+    //============保存dvsToken===========================
+    NSString *formatToekn = [dvsToken stringByReplacingOccurrencesOfString:@" " withString:@""];
+    
+    // 因为这个方法有一定的延迟，所以遇到程序启动，马上就需要使用token的情况，会将token存入本地，方便下一次使用时，快速获得
+    [[NSUserDefaults standardUserDefaults] setObject:formatToekn forKey:@"DeviceToken"]; //将dvsToken存入本地
+}
+
+// 接收到远程通知以后的处理
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
+    
+    // 将应用的icon上，未读推送+1
+    application.applicationIconBadgeNumber ++;
+    
+    // 取出后台推送过来的信息（取值方法一般都一样，这里只需要改处理方法）
+    if ([[userInfo objectForKey:@"aps"] objectForKey:@"alert"] != NULL) {
+        
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"温馨提示" message:[[userInfo objectForKey:@"aps"] objectForKey:@"alert"] delegate:nil cancelButtonTitle:@"确认" otherButtonTitles:nil];
+        [alert show];
+    }
+}
+
+// 注册推送失败
+- (void)application:(UIApplication*)application didFailToRegisterForRemoteNotificationsWithError:(NSError*)error {
+
+    NSLog(@"%@", error);
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application {
